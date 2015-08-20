@@ -14,6 +14,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
+import java.lang.ref.WeakReference;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.text.DateFormat;
@@ -52,97 +53,107 @@ public class Thermometer {
         this.selectedDevice = selectedDevice;
     }
 
+
+
+    /* The code below
+
     Handler messageHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            byte[] writeBuf = (byte[]) msg.obj;
-            int begin = msg.arg1;
-            int end = msg.arg2;
-            String temperatureInfoTimestamp = null;
 
-            switch(msg.what) {
-                case READ:
-                    Toast.makeText(appContext, "Have just read some data", Toast.LENGTH_SHORT).show();
-                    break;
-                case NO_STREAM:
-                    Toast.makeText(appContext, "Something wrong, no stream!", Toast.LENGTH_SHORT).show();
-                    break;
-                case THREAD_SLEEPING:
-                    Toast.makeText(appContext, "Thread sleeping", Toast.LENGTH_SHORT).show();
-                    break;
-                case MESSAGE_WORKING:
-                    Toast.makeText(appContext, "Please wait...", Toast.LENGTH_SHORT).show();
-                    break;
-                case MESSAGE_TEMPERATURE:
-                    String temperatureInfo = new String(writeBuf);
-                    temperatureInfo = temperatureInfo.substring(begin, end);
-
-                    DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-                    temperatureInfoTimestamp = df.format(Calendar.getInstance().getTime());
-                    //System.out.println(java.net.URLEncoder.encode("Hello World", "UTF-8").replaceAll("\\+", "%20"));
-
-
-//                    Context context = getApplicationContext();
-//                    Toast.makeText(appContext, temperatureInfoTimestamp + '\n' + temperatureInfo, Toast.LENGTH_SHORT).show();
-
-                    // temperatureInfo is a string of the form:
-                    // BEGINROM28a205cc050000c023.25ROM281a28230600006523.38END
-                    // BEGINTEXTxxxxxDATAyyyyITEMTEXTxxxxxDATAyyyyITEMEND
-
-                    Toast.makeText(appContext, temperatureInfo, Toast.LENGTH_SHORT).show();
-
-                    try {
-                        JSONObject jsonRootObject = new JSONObject(temperatureInfo);
-                        int items = jsonRootObject.optInt("items"); // Returns the value mapped by name if it exists
-                                                                    // and is an int or can be coerced to an int,
-                                                                    // or 0 otherwise.
-                        for(int i=0; i < items; i++){
-                            JSONObject jsonObject = jsonRootObject.getJSONObject(Integer.toString(i+1));
-                            String type = jsonObject.getString("type");
-                            if (type.equals("ds18b20")){
-                                String rom = jsonObject.getString("rom");
-                                double temp = jsonObject.getDouble("temp");
-
-                                Toast.makeText(appContext, i +":\nROM: "+rom+"\ntemperature: "+temp+"\nTime: "+temperatureInfoTimestamp, Toast.LENGTH_SHORT).show();
-                                sendData("ds18b20_temp", rom, Double.toString(temp), temperatureInfoTimestamp.replaceAll(" ", "%20"));
-                            } else if (type.equals("dht")){
-                                int number = jsonObject.getInt("number");
-                                double temp = jsonObject.getDouble("temp");
-                                double hum = jsonObject.getDouble("hum");
-
-                                sendData("dht_temp", Integer.toString(number), Double.toString(temp), temperatureInfoTimestamp.replaceAll(" ", "%20"));
-                                Toast.makeText(appContext, i +":\nnumber: "+number+"\ntemperature: "+temp+"\nTime: "+temperatureInfoTimestamp, Toast.LENGTH_SHORT).show();
-                                sendData("dht_hum", Integer.toString(number), Double.toString(hum), temperatureInfoTimestamp.replaceAll(" ", "%20"));
-                                Toast.makeText(appContext, i +":\nnumber: "+number+"\nhumidity: "+hum+"\nTime: "+temperatureInfoTimestamp, Toast.LENGTH_SHORT).show();
-                            }
-                        }
-                    } catch (JSONException e) {e.printStackTrace();}
-
-//                    int indexB = temperatureInfo.indexOf("BEGIN");
-//                    int indexE = temperatureInfo.indexOf("END");
-//                    if (indexB != -1 && indexE != -1) {
-//                        temperatureInfo = temperatureInfo.replace("BEGIN", "");
-//                        temperatureInfo = temperatureInfo.replace("END", "");
-//                        String[] ti = temperatureInfo.split("ROM");
-//                        String rom, temp;
-//                        for (int i = 0; i < ti.length; i++) {
-//                            if (ti[i].length() > 16){
-//                                rom = ti[i].substring(0,16);
-//                                temp = ti[i].substring(16, ti[i].length());
-//                                Toast.makeText(appContext, i +":\nROM: "+rom+"\ntemperature: "+temp+"\nTime: "+temperatureInfoTimestamp, Toast.LENGTH_SHORT).show();
-//                                sendData(rom, temp, temperatureInfoTimestamp.replaceAll(" ", "%20"));
-//                            }
-//                        }
-//                    } else
-//                        Toast.makeText(appContext, "Upsss...", Toast.LENGTH_SHORT).show();
-
-                    break;
-                default:
-                    Toast.makeText(appContext, "Default action" + '\n' + "Something wrong?" + '\n' + msg.what, Toast.LENGTH_SHORT).show();
-            }
         }
     };
 
+    makes the following warning:
+
+    This Handler class should be static or leaks might occur
+    
+    so we have to replace it by following code */
+
+    // === FIX BEGIN ===
+
+    // For some explanation why do this as followe, see:
+    // http://www.androiddesignpatterns.com/2013/01/inner-class-handler-memory-leak.html
+    // http://stackoverflow.com/questions/11407943/this-handler-class-should-be-static-or-leaks-might-occur-incominghandler
+    /**
+     * Instances of static inner classes do not hold an implicit
+     * reference to their outer class.
+     */
+    private static class MyHandler extends Handler {
+        private final WeakReference<Thermometer> mActivity;
+
+        public MyHandler(Thermometer activity) {
+            mActivity = new WeakReference<Thermometer>(activity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            Thermometer activity = mActivity.get();
+            if (activity != null) {
+                byte[] writeBuf = (byte[]) msg.obj;
+                int begin = msg.arg1;
+                int end = msg.arg2;
+                String temperatureInfoTimestamp;
+
+                switch(msg.what) {
+                    case READ:
+                        Toast.makeText(activity.appContext, "Have just read some data", Toast.LENGTH_SHORT).show();
+                        break;
+                    case NO_STREAM:
+                        Toast.makeText(activity.appContext, "Something wrong, no stream!", Toast.LENGTH_SHORT).show();
+                        break;
+                    case THREAD_SLEEPING:
+                        Toast.makeText(activity.appContext, "Thread sleeping", Toast.LENGTH_SHORT).show();
+                        break;
+                    case MESSAGE_WORKING:
+                        Toast.makeText(activity.appContext, "Please wait...", Toast.LENGTH_SHORT).show();
+                        break;
+                    case MESSAGE_TEMPERATURE:
+                        String temperatureInfo = new String(writeBuf);
+                        temperatureInfo = temperatureInfo.substring(begin, end);
+
+                        DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                        temperatureInfoTimestamp = df.format(Calendar.getInstance().getTime());
+
+                        Toast.makeText(activity.appContext, temperatureInfo, Toast.LENGTH_SHORT).show();
+
+                        try {
+                            JSONObject jsonRootObject = new JSONObject(temperatureInfo);
+                            int items = jsonRootObject.optInt("items"); // Returns the value mapped by name if it exists
+                            // and is an int or can be coerced to an int,
+                            // or 0 otherwise.
+                            for(int i=0; i < items; i++){
+                                JSONObject jsonObject = jsonRootObject.getJSONObject(Integer.toString(i+1));
+                                String type = jsonObject.getString("type");
+                                if (type.equals("ds18b20")){
+                                    String rom = jsonObject.getString("rom");
+                                    double temp = jsonObject.getDouble("temp");
+
+                                    Toast.makeText(activity.appContext, i +":\nROM: "+rom+"\ntemperature: "+temp+"\nTime: "+temperatureInfoTimestamp, Toast.LENGTH_SHORT).show();
+                                    activity.sendData("ds18b20_temp", rom, Double.toString(temp), temperatureInfoTimestamp.replaceAll(" ", "%20"));
+                                } else if (type.equals("dht")){
+                                    int number = jsonObject.getInt("number");
+                                    double temp = jsonObject.getDouble("temp");
+                                    double hum = jsonObject.getDouble("hum");
+
+                                    activity.sendData("dht_temp", Integer.toString(number), Double.toString(temp), temperatureInfoTimestamp.replaceAll(" ", "%20"));
+                                    Toast.makeText(activity.appContext, i +":\nnumber: "+number+"\ntemperature: "+temp+"\nTime: "+temperatureInfoTimestamp, Toast.LENGTH_SHORT).show();
+                                    activity.sendData("dht_hum", Integer.toString(number), Double.toString(hum), temperatureInfoTimestamp.replaceAll(" ", "%20"));
+                                    Toast.makeText(activity.appContext, i +":\nnumber: "+number+"\nhumidity: "+hum+"\nTime: "+temperatureInfoTimestamp, Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        } catch (JSONException e) {e.printStackTrace();}
+                        break;
+                    default:
+                        Toast.makeText(activity.appContext, "Default action" + '\n' + "Something wrong?" + '\n' + msg.what, Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
+    }
+
+    private final MyHandler messageHandler = new MyHandler(this);
+
+    // === FIX END ===
 
     public void temperatureRead(){
         if (selectedDevice != null) {
