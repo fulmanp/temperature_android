@@ -169,7 +169,7 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void setTemperatureAlarm(){
-        int everyXMinutes = 1;//5;
+        int everyXMinutes = 5;
         Toast.makeText(this, "Set repeated alarm", Toast.LENGTH_SHORT).show();
         // Set alarm
         AlarmManager alarmManager=(AlarmManager)appContext.getSystemService(Context.ALARM_SERVICE);

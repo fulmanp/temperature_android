@@ -67,7 +67,7 @@ public class Thermometer {
     makes the following warning:
 
     This Handler class should be static or leaks might occur
-    
+
     so we have to replace it by following code */
 
     // === FIX BEGIN ===
