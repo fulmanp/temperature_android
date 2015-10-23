@@ -14,7 +14,10 @@ public class AlarmManagerBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         PowerManager pm = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-        // If you hold a partial wake lock, the CPU will continue to run, regardless of any display timeouts or the state of the screen and even after the user presses the power button. In all other wake locks, the CPU will run, but the user can still put the device to sleep using the power button.
+        // If you hold a partial wake lock, the CPU will continue to run,
+        // regardless of any display timeouts or the state of the screen and even after the user
+        // presses the power button. In all other wake locks, the CPU will run, but the user can
+        // still put the device to sleep using the power button.
         PowerManager.WakeLock wl = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Thermometer power lock");
         //Acquire the lock
         wl.acquire();

@@ -66,7 +66,7 @@ public class ConnectedThread extends Thread {
                 {
                     messageHandler.obtainMessage(Thermometer.THREAD_SLEEPING).sendToTarget();
                     Thread.sleep(1000);
-                    write(msg);
+                    //write(msg);
                     continue;
                 }
             } catch (IOException e) {
