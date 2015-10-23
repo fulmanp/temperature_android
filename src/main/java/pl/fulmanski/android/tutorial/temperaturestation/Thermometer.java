@@ -6,6 +6,7 @@ import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Message;
 import android.widget.Toast;
@@ -173,12 +174,18 @@ public class Thermometer {
     }
 
     private void sendData(String description, String name, String value, String temperatureInfoTimestamp){
-        String url = "http://fulmanski.pl/php/temperature/?login=fulmanp&timestamp="+temperatureInfoTimestamp+"&name="+description+"_"+name+"&type=float&value="+value;
-        //Log.e("t",url);
-        try {
-            networkManager.sendGET(new URL(url));
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
+        SharedPreferences received_prefs = appContext.getSharedPreferences("my_prefs", 0);
+        String username = received_prefs.getString("username", "");
+        String server = received_prefs.getString("server", "");
+
+        if(!server.equals("None") && !username.equals("None")) {
+            String url = server + "/php/temperature/?login=" + username + "&timestamp=" + temperatureInfoTimestamp + "&name=" + description + "_" + name + "&type=float&value=" + value;
+            //Log.e("t",url);
+            try {
+                networkManager.sendGET(new URL(url));
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            }
         }
     }
 

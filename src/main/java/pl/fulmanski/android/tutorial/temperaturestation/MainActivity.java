@@ -8,16 +8,25 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.provider.Settings;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Calendar;
 
 public class MainActivity extends ActionBarActivity {
@@ -27,7 +36,13 @@ public class MainActivity extends ActionBarActivity {
     BluetoothAdapter bluetoothAdapter;
     static final int ALARM_UNIQUE_ID = 1;
     static final int REQUEST_CODE = 0;
+    private static final int settings= Menu.FIRST;
     Context appContext;
+    private final static String STORETEXT="storetext.txt";
+    //private EditText txtEditor;
+    private int button_id;
+    private RadioButton button;
+    RadioGroup group_button;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,6 +59,75 @@ public class MainActivity extends ActionBarActivity {
         editText.setText(isWorking ? "Is running..." : "Stop");
         Button buttonStartStop = (Button)findViewById(R.id.buttonStartStopService);
         buttonStartStop.setText(isWorking ? getResources().getString(R.string.button_start_stop_service_stop) : getResources().getString(R.string.button_start_stop_service_start));
+        group_button  = (RadioGroup) findViewById(R.id.prefgroup);
+
+        try {
+
+            InputStream in = openFileInput(STORETEXT);
+
+            if (in != null) {
+
+                InputStreamReader tmp=new InputStreamReader(in);
+
+                BufferedReader reader=new BufferedReader(tmp);
+
+                String str;
+
+                StringBuilder buf = new StringBuilder();
+                StringBuilder buf2 = new StringBuilder();
+                StringBuilder buf3 = new StringBuilder();
+
+                if ((str = reader.readLine()) != null) {
+
+                    buf.append(str);
+                }
+                else
+                    buf.append("None");
+
+                if ((str = reader.readLine()) != null) {
+
+                    buf2.append(str);
+                }
+                else
+                    buf2.append("None");
+
+                if((str = reader.readLine()) != null) {
+                    buf3.append(str);
+                }
+                else
+                    buf3.append("5");
+                in.close();
+
+                SharedPreferences prefs = getSharedPreferences("my_prefs", MODE_PRIVATE);
+                SharedPreferences.Editor edit = prefs.edit();
+
+                button_id = Integer.valueOf(buf3.toString());
+
+                edit.putString("username", buf.toString());
+                edit.putString("server", buf2.toString());
+                edit.putString("button_id", buf3.toString());
+                edit.commit();
+
+                Toast.makeText(this, "Welcome, " + buf.toString(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Server: " + buf2.toString(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Button ID: " + buf3.toString(), Toast.LENGTH_SHORT).show();
+            }
+
+        }
+
+        catch (java.io.FileNotFoundException e) {
+            // that's OK, we probably haven't created it yet
+        }
+
+        catch (Throwable t) {
+
+            Toast
+
+                    .makeText(this, "Exception: "+t.toString(), Toast.LENGTH_LONG)
+
+                    .show();
+
+        }
     }
 
     @Override
@@ -66,6 +150,17 @@ public class MainActivity extends ActionBarActivity {
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
+
+        switch  (id) {
+            case  R.id.action_settings:
+                Toast.makeText(this, "Settings", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(this, ActivitySettings.class);
+                startActivity(intent);
+//                return  true;
+                break;
+            default:
+                return  super.onOptionsItemSelected(item);
+        }
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
@@ -169,7 +264,26 @@ public class MainActivity extends ActionBarActivity {
     }
 
     private void setTemperatureAlarm(){
-        int everyXMinutes = 5;
+        int everyXMinutes;
+        button = (RadioButton) findViewById(button_id);
+
+        if(button.getText().equals("1 minute")) {
+            everyXMinutes = 1;
+            Toast.makeText(this, "Frequency: 1 minute", Toast.LENGTH_SHORT).show();
+        }
+        else if(button.getText().equals("5 minutes")) {
+            everyXMinutes = 5;
+            Toast.makeText(this, "Frequency: 5 minutes", Toast.LENGTH_SHORT).show();
+        }
+        else if(button.getText().equals("10 minutes")) {
+            everyXMinutes = 10;
+            Toast.makeText(this, "Frequency: 10 minutes", Toast.LENGTH_SHORT).show();
+        }
+        else {
+            everyXMinutes = 5; //1; //default value
+            Toast.makeText(this, "Default frequency: 10 minutes", Toast.LENGTH_SHORT).show();
+        }
+
         Toast.makeText(this, "Set repeated alarm", Toast.LENGTH_SHORT).show();
         // Set alarm
         AlarmManager alarmManager=(AlarmManager)appContext.getSystemService(Context.ALARM_SERVICE);
